@@ -1,0 +1,33 @@
+{
+  "name": "shapes",
+  "version": "1.0.0",
+  "description": "Shapes Desktop App",
+  "license": "ISC",
+  "author": "JulerGT",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron-builder": "^26.0.12",
+    "electron": "40.6.1"
+  },
+  "build": {
+    "appId": "com.shapes.desktop",
+    "productName": "Shapes",
+    "files": [
+      "index.js",
+      "preload.js",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png"
+    }
+  }
+}
