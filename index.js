@@ -188,6 +188,8 @@ function checkForUpdates() {
                     }).then(({ response: btn }) => {
                         if (btn !== 0) return;
                         if (downloadUrl) {
+                            if (window) window.close();
+                            if (splashWindow) splashWindow.close();
                             downloadAndInstallUpdate(downloadUrl);
                         } else {
                             shell.openExternal(DOWNLOAD_URL);
