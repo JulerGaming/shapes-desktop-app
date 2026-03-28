@@ -7,8 +7,8 @@ const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.png');
 const PRELOAD_PATH = path.join(__dirname, 'preload.js');
 const APP_URL = 'https://talk.shapes.inc';
 const appName = 'Shapes';
-const UPDATE_CHECK_URL = 'https://api.github.com/repos/JulerGT/Shapes/releases/latest';
-const DOWNLOAD_URL = 'https://github.com/JulerGT/Shapes/releases/latest';
+const UPDATE_CHECK_URL = 'https://api.github.com/repos/JulerGaming/shapes-desktop-app/releases/latest';
+const DOWNLOAD_URL = 'https://github.com/JulerGaming/shapes-desktop-app/releases/latest';
 const DEFAULT_SETTINGS = {
     launchOnStartup: false,
     startMinimized: false
