@@ -81,7 +81,8 @@ function httpsGetFollowRedirects(url, options, callback) {
 }
 
 function downloadAndInstallUpdate(downloadUrl) {
-    const tmpPath = path.join(app.getPath('temp'), 'Shapes-Setup.exe');
+    const assetName = downloadUrl.split('/').pop() || 'Shapes-Setup.exe';
+    const tmpPath = path.join(app.getPath('temp'), assetName);
     const file = fs.createWriteStream(tmpPath);
 
     let progressWindow = new BrowserWindow({
@@ -174,7 +175,7 @@ function checkForUpdates() {
                     const latestVersion = (release.tag_name || '').replace(/^v/, '');
                     if (!latestVersion || latestVersion === currentVersion) return;
 
-                    const asset = (release.assets || []).find(a => a.name === 'Shapes-Setup.exe');
+                    const asset = (release.assets || []).find(a => /^Shapes-Setup.*\.exe$/i.test(a.name));
                     const downloadUrl = asset ? asset.browser_download_url : null;
 
                     dialog.showMessageBox(mainWindow, {
