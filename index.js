@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
+const { spawn } = require('child_process');
 const { app, BrowserWindow, ipcMain, Notification, Tray, Menu, dialog, shell } = require('electron');
 
 const APP_ICON_PATH = path.join(__dirname, 'assets', 'icon.png');
@@ -68,6 +69,96 @@ function applyLoginItemSettings() {
     });
 }
 
+function httpsGetFollowRedirects(url, options, callback) {
+    https.get(url, options, (response) => {
+        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+            response.resume();
+            httpsGetFollowRedirects(response.headers.location, options, callback);
+        } else {
+            callback(response);
+        }
+    }).on('error', (err) => callback(null, err));
+}
+
+function downloadAndInstallUpdate(downloadUrl) {
+    const tmpPath = path.join(app.getPath('temp'), 'Shapes-Setup.exe');
+    const file = fs.createWriteStream(tmpPath);
+
+    let progressWindow = new BrowserWindow({
+        width: 360,
+        height: 160,
+        frame: false,
+        resizable: false,
+        movable: true,
+        minimizable: false,
+        maximizable: false,
+        alwaysOnTop: true,
+        skipTaskbar: false,
+        icon: APP_ICON_PATH,
+        backgroundColor: '#101418',
+        webPreferences: { contextIsolation: true, nodeIntegration: false }
+    });
+
+    const renderProgress = (pct, label) => `data:text/html;charset=utf-8,${encodeURIComponent(`<!doctype html><html><head><meta charset="UTF-8"/><style>
+        body{margin:0;height:100vh;display:grid;place-items:center;background:radial-gradient(circle at top,#1a2430,#101418 70%);color:#fff;font-family:Segoe UI,sans-serif;}
+        .box{text-align:center;width:280px;}
+        .title{font-size:15px;font-weight:600;margin-bottom:12px;}
+        .bar-bg{background:#1e2d3d;border-radius:6px;height:8px;overflow:hidden;margin-bottom:8px;}
+        .bar-fill{background:#4a9eff;height:100%;border-radius:6px;width:${pct}%;transition:width .2s;}
+        .label{font-size:11px;opacity:.65;}
+    </style></head><body><div class="box"><div class="title">Downloading update...</div><div class="bar-bg"><div class="bar-fill"></div></div><div class="label">${label}</div></div></body></html>`)}`;
+
+    progressWindow.loadURL(renderProgress(0, 'Starting...'));
+
+    httpsGetFollowRedirects(downloadUrl, { headers: { 'User-Agent': appName } }, (response, err) => {
+        if (err || !response) {
+            if (!progressWindow.isDestroyed()) progressWindow.close();
+            file.destroy();
+            fs.unlink(tmpPath, () => {});
+            dialog.showErrorBox('Update Failed', 'Could not download the update. Please try again later.');
+            return;
+        }
+
+        const total = parseInt(response.headers['content-length'] || '0', 10);
+        let received = 0;
+
+        response.pipe(file);
+
+        response.on('data', (chunk) => {
+            received += chunk.length;
+            if (total > 0 && !progressWindow.isDestroyed()) {
+                const pct = Math.round((received / total) * 100);
+                const mb = (received / 1024 / 1024).toFixed(1);
+                const totalMb = (total / 1024 / 1024).toFixed(1);
+                progressWindow.loadURL(renderProgress(pct, `${mb} MB / ${totalMb} MB`));
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.setProgressBar(received / total);
+                }
+            }
+        });
+
+        file.on('finish', () => {
+            file.close(() => {
+                if (!progressWindow.isDestroyed()) progressWindow.close();
+                progressWindow = null;
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                    mainWindow.setProgressBar(-1);
+                }
+                isQuitting = true;
+                spawn(tmpPath, [], { detached: true, stdio: 'ignore' }).unref();
+                app.quit();
+            });
+        });
+
+        response.on('error', () => {
+            file.destroy();
+            fs.unlink(tmpPath, () => {});
+            if (!progressWindow.isDestroyed()) progressWindow.close();
+            dialog.showErrorBox('Update Failed', 'Download was interrupted. Please try again later.');
+        });
+    });
+}
+
 function checkForUpdates() {
     const currentVersion = app.getVersion();
 
@@ -81,20 +172,26 @@ function checkForUpdates() {
                 try {
                     const release = JSON.parse(data);
                     const latestVersion = (release.tag_name || '').replace(/^v/, '');
-                    if (latestVersion && latestVersion !== currentVersion) {
-                        dialog.showMessageBox(mainWindow, {
-                            type: 'info',
-                            title: 'Update Available',
-                            message: `A new version of ${appName} is available!`,
-                            detail: `Current: v${currentVersion}\nLatest: v${latestVersion}\n\nWould you like to download it?`,
-                            buttons: ['Download', 'Later'],
-                            defaultId: 0
-                        }).then(({ response: btn }) => {
-                            if (btn === 0) {
-                                shell.openExternal(DOWNLOAD_URL);
-                            }
-                        });
-                    }
+                    if (!latestVersion || latestVersion === currentVersion) return;
+
+                    const asset = (release.assets || []).find(a => a.name === 'Shapes-Setup.exe');
+                    const downloadUrl = asset ? asset.browser_download_url : null;
+
+                    dialog.showMessageBox(mainWindow, {
+                        type: 'info',
+                        title: 'Update Available',
+                        message: `A new version of ${appName} is available!`,
+                        detail: `Current: v${currentVersion}\nLatest: v${latestVersion}\n\nInstall now? The app will restart automatically.`,
+                        buttons: ['Install Update', 'Later'],
+                        defaultId: 0
+                    }).then(({ response: btn }) => {
+                        if (btn !== 0) return;
+                        if (downloadUrl) {
+                            downloadAndInstallUpdate(downloadUrl);
+                        } else {
+                            shell.openExternal(DOWNLOAD_URL);
+                        }
+                    });
                 } catch (_) {}
             });
         }
