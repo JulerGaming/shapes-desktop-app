@@ -422,7 +422,7 @@ function createWindow() {
         icon: APP_ICON_PATH,
         webPreferences: {
             nodeIntegration: false,
-            contextIsolation: true,
+            contextIsolation: false,
             preload: PRELOAD_PATH
         }
     });
