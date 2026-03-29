@@ -115,7 +115,7 @@ function downloadAndInstallUpdate(downloadUrl) {
         if (err || !response) {
             if (!progressWindow.isDestroyed()) progressWindow.close();
             file.destroy();
-            fs.unlink(tmpPath, () => {});
+            fs.unlink(tmpPath, () => { });
             dialog.showErrorBox('Update Failed', 'Could not download the update. Please try again later.');
             return;
         }
@@ -153,7 +153,7 @@ function downloadAndInstallUpdate(downloadUrl) {
 
         response.on('error', () => {
             file.destroy();
-            fs.unlink(tmpPath, () => {});
+            fs.unlink(tmpPath, () => { });
             if (!progressWindow.isDestroyed()) progressWindow.close();
             dialog.showErrorBox('Update Failed', 'Download was interrupted. Please try again later.');
         });
@@ -178,29 +178,20 @@ function checkForUpdates() {
                     const asset = (release.assets || []).find(a => /^Shapes-Setup.*\.exe$/i.test(a.name));
                     const downloadUrl = asset ? asset.browser_download_url : null;
 
-                    dialog.showMessageBox(mainWindow, {
-                        type: 'info',
-                        title: 'Update Available',
-                        message: `A new version of ${appName} is available!`,
-                        detail: `Current: v${currentVersion}\nLatest: v${latestVersion}\n\nInstall now? The app will restart automatically.`,
-                        buttons: ['Install Update', 'Later'],
-                        defaultId: 0
-                    }).then(({ response: btn }) => {
-                        if (btn !== 0) return;
-                        if (downloadUrl) {
-                            if (window) window.close();
-                            if (splashWindow) splashWindow.close();
-                            downloadAndInstallUpdate(downloadUrl);
-                        } else {
-                            shell.openExternal(DOWNLOAD_URL);
-                        }
-                    });
-                } catch (_) {}
+
+                    if (downloadUrl) {
+                        if (window) window.close();
+                        if (splashWindow) splashWindow.close();
+                        downloadAndInstallUpdate(downloadUrl);
+                    } else {
+                        shell.openExternal(DOWNLOAD_URL);
+                    }
+                } catch (_) { }
             });
         }
-    );
+    )
 
-    request.on('error', () => {});
+    request.on('error', () => { });
     request.on('timeout', () => { request.destroy(); });
     request.end();
 }
