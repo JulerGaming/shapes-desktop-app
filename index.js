@@ -178,7 +178,6 @@ function checkForUpdates() {
                     const asset = (release.assets || []).find(a => /^Shapes-Setup.*\.exe$/i.test(a.name));
                     const downloadUrl = asset ? asset.browser_download_url : null;
 
-
                     if (downloadUrl) {
                         if (window) window.close();
                         if (splashWindow) splashWindow.close();
