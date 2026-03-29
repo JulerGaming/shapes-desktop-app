@@ -179,7 +179,7 @@ function checkForUpdates() {
                     const downloadUrl = asset ? asset.browser_download_url : null;
 
                     if (downloadUrl) {
-                        if (window) window.close();
+                        if (mainWindow) mainWindow.close();
                         if (splashWindow) splashWindow.close();
                         downloadAndInstallUpdate(downloadUrl);
                     } else {
